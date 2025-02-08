@@ -119,9 +119,9 @@ class Turret(Node):
         self.stamp = self.get_clock().now()
         # LQR で得られた入力電圧を指令値に変換する
         # 電源電圧24Vと指令値の最大30000が対応するとして、1250倍としている
-        yaw_output = self.lqr_yaw.update(np.array([(self.yaw_data - self.target_yaw)*abs(self.ratio_yaw)]), diff_time_nsec / 1000000000.0) * 1000 * np.sign(self.ratio_yaw)
+        yaw_output = self.lqr_yaw.update(self.yaw_data*abs(self.ratio_yaw), self.target_yaw*abs(self.ratio_yaw), diff_time_nsec / 1000000000.0) * 1000 * np.sign(self.ratio_yaw)
         # 砲塔の重心の偏りなどで生じる抵抗トルクを角度に比例するとモデル化して実測値ベースで調整（角度に加えているのは脱力時に自然と向く角度で0とするための値）
-        pitch_output = self.lqr_pitch.update(np.array([(self.pitch_data - self.target_pitch)*abs(self.ratio_pitch)]), diff_time_nsec / 1000000000.0, 4.0 * (self.pitch_data + 0.05)) * 1000 * np.sign(self.ratio_pitch)
+        pitch_output = self.lqr_pitch.update(self.pitch_data*abs(self.ratio_pitch), self.target_pitch*abs(self.ratio_pitch), diff_time_nsec / 1000000000.0, 4.0 * (self.pitch_data + 0.05)) * 1000 * np.sign(self.ratio_pitch)
 
         if self.DEBUG:
             self.get_logger().info(f"yaw:   input: {(self.yaw_data - self.target_yaw)*abs(self.ratio_yaw)}, output:{yaw_output}")
@@ -196,21 +196,35 @@ class LQR:
                            [0.0],
                            [0.0]])
         self.old_x = 0.0
+        self.old_i = 0.0
+        self.old_x_u = 0.0
+        self.old_dx_u = 0.0
+        self.current_accel = 0.0
 
-    def state_update(self, x, dt):
-        self.x[0][0] = x
+    def state_update(self, x, u, dt):
+        self.x[0][0] = x - u
         self.x[1][0] = (x - self.old_x) / dt
-        self.x[2][0] = (self.input[0][0] - self.back_emf_constant * self.x[1][0]) / self.motor_redistance
+        # (L/dt + R) i[k] = V - K_e * omega + L/dt * i [k - 1]
+        self.x[2][0] = (self.input[0][0] - self.back_emf_constant * self.x[1][0] + self.motor_inductance/dt * self.old_i) / (self.motor_redistance + self.motor_inductance/dt)
+        dx_u = ((x - u) - self.old_x_u) / dt
+        self.current_accel = (dx_u - self.old_dx_u) / dt
         self.old_x = x
+        self.old_i = self.x[2][0]
+        self.old_x_u = x - u
+        self.old_dx_u = dx_u
 
-    def update(self, x, dt, addtional_torque = 0.0):
-        self.state_update(x, dt)
+    def update(self, x, u, dt, addtional_torque = 0.0):
+        self.state_update(x, u, dt)
         self.input = -self.lqr_gain @ self.x
         friction_torque =  (self.static_friction_torque * np.exp(- (self.x[1][0] / self.stribeck_vel) ** 2)) * math.tanh(self.x[0][0] / 0.000001)
         self.input[0][0] += (-friction_torque + addtional_torque +  self.torque_constant * self.back_emf_constant * self.x[1][0] / self.motor_redistance) / (self.torque_constant / self.motor_redistance)
+        # フィードフォワードとして角加速度による電圧値を加える
+        self.input[0][0] += self.current_accel * self.inertia_moment * self.motor_redistance / self.torque_constant * 0.2
         # 念の為12Vでリミット
         if abs(self.input[0][0]) > 12.0:
-            self.input[0][0] = 12.0 * self.input[0][0] / abs(self.input[0][0]) 
+            #self.input[0][0] = 12.0 * self.input[0][0] / abs(self.input[0][0]) 
+            # リミットがかかるほどの状態の場合には制御が発散しているので、一旦止める
+            self.input[0][0] = 0.0
         return self.input[0][0]
 
     def get_lqr_gain(self):
