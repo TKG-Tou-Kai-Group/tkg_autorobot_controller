@@ -121,7 +121,7 @@ class Turret(Node):
         # 電源電圧24Vと指令値の最大30000が対応するとして、1250倍としている
         yaw_output = self.lqr_yaw.update(np.array([(self.yaw_data - self.target_yaw)*abs(self.ratio_yaw)]), diff_time_nsec / 1000000000.0) * 1000 * np.sign(self.ratio_yaw)
         # 砲塔の重心の偏りなどで生じる抵抗トルクを角度に比例するとモデル化して実測値ベースで調整（角度に加えているのは脱力時に自然と向く角度で0とするための値）
-        pitch_output = self.lqr_pitch.update(np.array([(self.pitch_data - self.target_pitch)*abs(self.ratio_pitch)]), diff_time_nsec / 1000000000.0, 3.0 * (self.pitch_data + 0.05)) * 1000 * np.sign(self.ratio_pitch)
+        pitch_output = self.lqr_pitch.update(np.array([(self.pitch_data - self.target_pitch)*abs(self.ratio_pitch)]), diff_time_nsec / 1000000000.0, 4.0 * (self.pitch_data + 0.05)) * 1000 * np.sign(self.ratio_pitch)
 
         if self.DEBUG:
             self.get_logger().info(f"yaw:   input: {(self.yaw_data - self.target_yaw)*abs(self.ratio_yaw)}, output:{yaw_output}")
