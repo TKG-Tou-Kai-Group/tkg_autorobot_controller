@@ -218,7 +218,7 @@ class LQR:
         friction_torque =  (self.static_friction_torque * np.exp(- (self.x[1][0] / self.stribeck_vel) ** 2)) * math.tanh(self.x[0][0] / 0.000001)
         self.input[0][0] += (-friction_torque + addtional_torque +  self.torque_constant * self.back_emf_constant * self.x[1][0] / self.motor_redistance) / (self.torque_constant / self.motor_redistance)
         # フィードフォワードとして角加速度による電圧値を加える
-        self.input[0][0] += self.current_accel * self.inertia_moment * self.motor_redistance / self.torque_constant * 0.2
+        self.input[0][0] += self.current_accel * self.inertia_moment * self.motor_redistance / self.torque_constant * 0.1
         # 念の為12Vでリミット
         if abs(self.input[0][0]) > 12.0:
             #self.input[0][0] = 12.0 * self.input[0][0] / abs(self.input[0][0]) 
