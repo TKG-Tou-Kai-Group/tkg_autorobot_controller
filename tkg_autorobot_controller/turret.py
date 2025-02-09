@@ -31,7 +31,7 @@ class Turret(Node):
         self.control_sub = self.create_subscription(Bool, '/control', self.control_callback, 10)
 
         # 各目標角度の入力に適用するリングバッファのサイズ
-        self.BUFFER_SIZE = 30
+        self.BUFFER_SIZE = 10
         
         self.yaw_data = 0.0
         self.target_yaw = 0.0
@@ -118,7 +118,6 @@ class Turret(Node):
         diff_time_nsec = (self.get_clock().now()-self.stamp).nanoseconds
         self.stamp = self.get_clock().now()
         # LQR で得られた入力電圧を指令値に変換する
-        # 電源電圧24Vと指令値の最大30000が対応するとして、1250倍としている
         yaw_output = self.lqr_yaw.update(self.yaw_data*abs(self.ratio_yaw), self.target_yaw*abs(self.ratio_yaw), diff_time_nsec / 1000000000.0) * 1000 * np.sign(self.ratio_yaw)
         # 砲塔の重心の偏りなどで生じる抵抗トルクを角度に比例するとモデル化して実測値ベースで調整（角度に加えているのは脱力時に自然と向く角度で0とするための値）
         pitch_output = self.lqr_pitch.update(self.pitch_data*abs(self.ratio_pitch), self.target_pitch*abs(self.ratio_pitch), diff_time_nsec / 1000000000.0, 4.0 * (self.pitch_data + 0.05)) * 1000 * np.sign(self.ratio_pitch)
