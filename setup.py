@@ -25,6 +25,7 @@ setup(
         'console_scripts': [
             "calibrator = tkg_autorobot_controller.turret_calibrator:main",
             "turret = tkg_autorobot_controller.turret:main",
+            "roller = tkg_autorobot_controller.roller:main",
         ],
     },
 )
