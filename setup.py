@@ -26,6 +26,7 @@ setup(
             "calibrator = tkg_autorobot_controller.turret_calibrator:main",
             "turret = tkg_autorobot_controller.turret:main",
             "roller = tkg_autorobot_controller.roller:main",
+            "record_target_volt_and_yaw = tkg_autorobot_controller.record_target_volt_and_yaw:main",
         ],
     },
 )
