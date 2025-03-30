@@ -16,7 +16,7 @@ def generate_launch_description():
             output='screen'
         ),
         Node(
-            package='corejp_sample_controller',
+            package='tkg_autorobot_controller',
             executable='roller',
             name='roller',
             output='screen'
